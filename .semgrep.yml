@@ -1,0 +1,6 @@
+rules:
+  - id: no-hardcoded-secrets
+    pattern-regex: (?i)(api_key|secret|token|password)\s*=\s*["'][^"']+["']
+    message: "Possible hardcoded secret found."
+    severity: WARNING
+    languages: [python]

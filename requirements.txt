@@ -1,0 +1,8 @@
+Flask==3.0.3
+flask-jwt-extended==4.6.0
+flask-limiter==3.7.0
+pydantic==2.7.4
+python-json-logger==2.0.7
+cryptography==42.0.8
+python-dotenv==1.0.1
+semgrep==1.87.0
