@@ -5,6 +5,34 @@ on:
   pull_request:
 
 jobs:
+  tests:
+    name: Pytest
+    runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: test
+      JWT_SECRET_KEY: test_jwt_secret_key_please_change_1234567890
+      # Fernet key just for CI/tests (do not use in prod)
+      FERNET_KEY: "mZkQ4f2nX9m8yKqF1Zr7s2hQm0w9cQwN2r2lWq2lVtU="
+      DB_PATH: test.db
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Run tests
+        run: pytest -q
+
   semgrep:
     name: Semgrep SAST
     runs-on: ubuntu-latest

@@ -1,53 +1,79 @@
 import time
 import uuid
-from typing import Dict, Any
 
+from app.db.database import get_connection
 from app.common.security import encrypt_str, mask_document
 
-_PAYMENTS: Dict[str, Dict[str, Any]] = {}
-_IDEMPOTENCY: Dict[str, str] = {}  
-
-def _public_payment(payment: Dict[str, Any]) -> Dict[str, Any]:
-    safe = dict(payment)
-    safe_payer = dict(safe.get("payer", {}))
-    safe_payer.pop("document_encrypted", None)
-    safe["payer"] = safe_payer
-    return safe
+def _row_to_public_payment(row) -> dict:
+    return {
+        "id": row["id"],
+        "status": row["status"],
+        "created_at": row["created_at"],
+        "owner": row["owner"],
+        "amount_cents": row["amount_cents"],
+        "currency": row["currency"],
+        "payer": {
+            "name": row["payer_name"],
+            "document": row["payer_document_masked"],
+        },
+        "description": row["description"],
+        "idempotency_key": row["idempotency_key"],
+    }
 
 def create_payment(owner: str, payload: dict) -> dict:
     idem_key = payload["idempotency_key"]
 
-    if idem_key in _IDEMPOTENCY:
-        payment_id = _IDEMPOTENCY[idem_key]
-        return _public_payment(_PAYMENTS[payment_id])
+    conn = get_connection()
+    try:
+        existing = conn.execute(
+            "SELECT * FROM payments WHERE idempotency_key = ?",
+            (idem_key,)
+        ).fetchone()
 
-    payment_id = str(uuid.uuid4())
-    now = int(time.time())
+        if existing:
+            return _row_to_public_payment(existing)
 
-    payer = payload["payer"].copy()
-    payer["document_encrypted"] = encrypt_str(payer["document"])
-    payer["document"] = mask_document(payer["document"])
+        payment_id = str(uuid.uuid4())
+        now = int(time.time())
 
-    payment = {
-        "id": payment_id,
-        "status": "CREATED",
-        "created_at": now,
-        "owner": owner,
-        "amount_cents": payload["amount_cents"],
-        "currency": payload["currency"],
-        "payer": payer,
-        "description": payload.get("description"),
-        "idempotency_key": idem_key,
-    }
+        payer_name = payload["payer"]["name"]
+        payer_doc = payload["payer"]["document"]           
+        payer_doc_masked = mask_document(payer_doc)
+        payer_doc_encrypted = encrypt_str(payer_doc)
 
-    _PAYMENTS[payment_id] = payment
-    _IDEMPOTENCY[idem_key] = payment_id
-    return _public_payment(payment)
+        conn.execute(
+            """
+            INSERT INTO payments (
+                id, owner, amount_cents, currency,
+                payer_name, payer_document_masked, payer_document_encrypted,
+                description, idempotency_key, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                payment_id, owner, payload["amount_cents"], payload["currency"],
+                payer_name, payer_doc_masked, payer_doc_encrypted,
+                payload.get("description"), idem_key, "CREATED", now
+            )
+        )
+        conn.commit()
+
+        row = conn.execute("SELECT * FROM payments WHERE id = ?", (payment_id,)).fetchone()
+        return _row_to_public_payment(row)
+
+    finally:
+        conn.close()
 
 def get_payment(owner: str, payment_id: str) -> dict | None:
-    payment = _PAYMENTS.get(payment_id)
-    if not payment:
-        return None
-    if payment["owner"] != owner:
-        return None
-    return _public_payment(payment)
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT * FROM payments WHERE id = ? AND owner = ?",
+            (payment_id, owner)
+        ).fetchone()
+
+        if not row:
+            return None
+
+        return _row_to_public_payment(row)
+    finally:
+        conn.close()

@@ -21,4 +21,7 @@ def create_app():
     from app.payments.routes import payments_bp
     app.register_blueprint(payments_bp, url_prefix="/payments")
 
+    from app.db.init_db import init_db
+    init_db()
+
     return app

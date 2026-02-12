@@ -1,21 +1,16 @@
-# Ambiente virtual
 .venv/
 
-# Variáveis de ambiente
 .env
 
-# Cache Python
 __pycache__/
 *.pyc
 
-# SQLite
 *.sqlite3
 
-# VS Code
 .vscode/
 
-# IDEs
 .idea/
 
-# Mac
 .DS_Store
+
+*.db
