@@ -11,8 +11,7 @@ jobs:
     env:
       SECRET_KEY: test
       JWT_SECRET_KEY: test_jwt_secret_key_please_change_1234567890
-      # Fernet key just for CI/tests (do not use in prod)
-      FERNET_KEY: "mZkQ4f2nX9m8yKqF1Zr7s2hQm0w9cQwN2r2lWq2lVtU="
+      FERNET_KEY: ${{ secrets.FERNET_KEY }}
       DB_PATH: test.db
 
     steps:
