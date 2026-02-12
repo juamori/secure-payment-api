@@ -1,6 +1,6 @@
 # 🔐 Secure Payment API
 
-![CI](https://github.com/SEU_USER/SEU_REPO/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/juamori/secure-payment-api)
 
 A security-first payment API built with Flask, demonstrating secure backend engineering practices, encrypted data handling, authentication, idempotency control and DevSecOps automation.
 
